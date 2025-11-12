@@ -1,0 +1,200 @@
+import grpc
+from concurrent import futures
+import logging
+import asyncio
+import sys
+from typing import Dict, Any
+
+if sys.platform == "win32":
+    import codecs
+    sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+    sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
+
+from . import arasaka_pb2
+from . import arasaka_pb2_grpc
+
+from config.config import settings
+from infrastructure.di.dependencies import get_search_usecase, get_qdrant_repository
+from shared.decorators import log_grpc_calls
+
+logging.basicConfig(
+    level=getattr(logging, settings.log_level.upper()),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+class ArasakaServicer(arasaka_pb2_grpc.ArasakaServiceServicer):
+    """
+    gRPC servicer for Arasaka question-answering service
+    """
+    
+    def __init__(self):
+        self._question_usecase = None
+        logger.info("Arasaka service initialized")
+    
+    @property
+    def question_usecase(self):
+        """
+        Get question usecase with lazy initialization
+        
+        Returns:
+            QuestionUsecase instance for processing search requests
+        """
+        if self._question_usecase is None:
+            self._question_usecase = get_search_usecase()
+        return self._question_usecase
+    
+    @log_grpc_calls
+    def SearchAnswers(self, request, context):
+        """
+        Search for similar answers using gRPC
+        
+        Args:
+            request: gRPC SearchRequest containing query and parameters
+            context: gRPC context for error handling
+            
+        Returns:
+            gRPC SearchResponse with search results
+        """
+        try:
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                       future = executor.submit(
+                           asyncio.run,
+                           self.question_usecase.search_answers(
+                               query=request.query
+                           )
+                       )
+                       response = future.result()
+                else:
+                    response = loop.run_until_complete(
+                        self.question_usecase.search_answers(
+                            query=request.query
+                        )
+                    )
+            except RuntimeError:
+                   response = asyncio.run(
+                       self.question_usecase.search_answers(
+                           query=request.query
+                       )
+                   )
+            
+            results = []
+            for result in response:
+                grpc_result = arasaka_pb2.SearchResult(
+                    id=result.answer.id,
+                    answer=result.answer.text,
+                    answer_id=result.answer.answer_id,
+                    score=result.score,
+                    metadata=result.answer.metadata or {}
+                )
+                results.append(grpc_result)
+            
+            return arasaka_pb2.SearchResponse(
+                results=results,
+                total_found=len(results),
+                query=request.query
+            )
+            
+        except Exception as e:
+            logger.error(f"Search error: {e}")
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(f"Search failed: {str(e)}")
+            return arasaka_pb2.SearchResponse()
+    
+    @log_grpc_calls
+    def HealthCheck(self, request, context):
+        """
+        Health check endpoint for service monitoring
+        
+        This method provides health status information about the service,
+        including version, model information, and Qdrant connection status.
+        
+        Args:
+            request: gRPC HealthRequest (empty)
+            context: gRPC context for error handling
+            
+        Returns:
+            gRPC HealthResponse with service status information
+        """
+        try:
+            qdrant_repo = get_qdrant_repository()
+            collection_info = {}
+            
+            try:
+                import asyncio
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    collection_info = {"status": "collection_info_unavailable"}
+                else:
+                    collection_info = loop.run_until_complete(qdrant_repo.get_collection_info())
+            except Exception as collection_error:
+                logger.warning(f"Could not get collection info: {collection_error}")
+                collection_info = {"error": str(collection_error)}
+            
+            return arasaka_pb2.HealthResponse(
+                status="healthy",
+                version=settings.api_version,
+                model_name=settings.model_name,
+                qdrant_status="connected",
+                collection_info=collection_info
+            )
+            
+        except Exception as e:
+            logger.error(f"Health check error: {e}")
+            return arasaka_pb2.HealthResponse(
+                status="unhealthy",
+                version=settings.api_version,
+                model_name=settings.model_name,
+                qdrant_status="disconnected",
+                collection_info={"error": str(e)}
+            )
+
+
+def serve():
+    print("Starting Arasaka gRPC Service...")
+    print(f"System resources check:")
+    print(f"   - Model: {settings.model_name}")
+    print(f"   - Device: {settings.model_device}")
+    print(f"   - Qdrant: {settings.qdrant_host}:{settings.qdrant_port}")
+    print(f"   - Collection: {settings.qdrant_collection_name}")
+    
+    try:
+        print("Creating gRPC server...")
+        server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        arasaka_pb2_grpc.add_ArasakaServiceServicer_to_server(
+            ArasakaServicer(), server
+        )
+        
+        listen_addr = f"{settings.api_host}:{settings.api_port}"
+        server.add_insecure_port(listen_addr)
+        
+        print(f"Starting gRPC server on {listen_addr}")
+        logger.info(f"Starting gRPC server on {listen_addr}")
+        server.start()
+        
+        print("Arasaka gRPC Service is running!")
+        print("Ready to accept connections")
+        print("Press Ctrl+C to stop")
+        
+        try:
+            server.wait_for_termination()
+        except KeyboardInterrupt:
+            print("\nShutting down gRPC server...")
+            logger.info("Shutting down gRPC server")
+            server.stop(0)
+            print("Server stopped successfully")
+            
+    except Exception as e:
+        print(f"Error starting server: {e}")
+        logger.error(f"Error starting server: {e}")
+        raise
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=getattr(logging, settings.log_level))
+    serve()

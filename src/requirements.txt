@@ -1,0 +1,23 @@
+# gRPC
+grpcio>=1.60.0
+grpcio-tools>=1.60.0
+
+# Machine Learning (CPU only) - совместимые версии
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.1.0+cpu
+numpy<2.0.0
+sentence-transformers==2.2.2
+transformers==4.35.2
+huggingface_hub==0.16.4
+sentencepiece>=0.1.99
+
+# Vector Database
+qdrant-client>=1.7.0
+
+# Utilities
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+
+# Development and Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0

@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package arasaka;
+
+// Search service definition
+service ArasakaService {
+    // Search for similar answers
+    rpc SearchAnswers(SearchRequest) returns (SearchResponse);
+    
+    // Health check
+    rpc HealthCheck(HealthRequest) returns (HealthResponse);
+}
+
+// Search request message
+message SearchRequest {
+    string query = 1;
+    int32 limit = 2;
+    double score_threshold = 3;
+}
+
+// Search result message
+message SearchResult {
+    string id = 1;
+    string answer = 2;
+    string answer_id = 3;
+    double score = 4;
+    map<string, string> metadata = 5;
+}
+
+// Search response message
+message SearchResponse {
+    repeated SearchResult results = 1;
+    int32 total_found = 2;
+    string query = 3;
+}
+
+// Health check request
+message HealthRequest {
+    // Empty message for health check
+}
+
+// Health check response
+message HealthResponse {
+    string status = 1;
+    string version = 2;
+    string model_name = 3;
+    string qdrant_status = 4;
+    map<string, string> collection_info = 5;
+}
