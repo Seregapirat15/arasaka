@@ -4,12 +4,14 @@ gRPC client for MAX bot to communicate with ML service
 import grpc
 import logging
 from typing import List, Optional
-
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+
+# Add src directory to path for gRPC proto imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from infrastructure.grpc import arasaka_pb2, arasaka_pb2_grpc
+from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +150,10 @@ def get_ml_client() -> MLServiceClient:
     """
     global _ml_client
     if _ml_client is None:
-        _ml_client = MLServiceClient()
+        _ml_client = MLServiceClient(
+            host=settings.ml_service_host,
+            port=settings.ml_service_port,
+            timeout=settings.ml_service_timeout
+        )
     return _ml_client
 

@@ -1,6 +1,14 @@
 # Arasaka QA Service
 
-gRPC service for question-answering using vector similarity search + MAX Bot integration.
+gRPC service for question-answering using vector similarity search.
+
+## Архитектура
+
+```
+max-bot/          → MAX Bot (микросервис для мессенджера)
+src/              → ML Service (gRPC API + модели)
+docker-compose.yml → Qdrant + ML Service
+```
 
 ## Quick Start
 
@@ -19,27 +27,25 @@ python test_search.py
 
 ### Запуск бота MAX
 
-**Ручной способ:**
 ```bash
-# 1. Запустить Qdrant
+# 1. Запустить ML Service (Docker)
 docker-compose up -d 
 
-# 2. Загрузить данные (если еще не загружены)
-python src/tools/fill_qdrant.py
+# 2. Загрузить данные в Qdrant
+docker-compose exec arasaka python src/tools/fill_qdrant.py
 
 # 3. Создать .env файл с токеном бота
 cp env.example .env
 # Отредактируйте .env и укажите MAX_BOT_TOKEN
 
-# 4. Установить зависимости
-pip install -r src/requirements.txt
-pip install -r src/infrastructure/max/requirements.txt
+# 4. Установить зависимости бота
+pip install -r max-bot/requirements.txt
 
 # 5. Запустить бота
-python src/infrastructure/max/bot_main.py
+python max-bot/bot_main.py
 ```
 
-**Примечание:** Бот использует usecase напрямую, gRPC сервис не обязателен для работы бота.
+**Примечание:** Бот общается с ML Service через gRPC на порту 8001.
 
 
 ## Configuration
@@ -60,9 +66,10 @@ gRPC service on port 8001:
 
 ## MAX Bot
 
-Бот для мессенджера MAX:
-- Отвечает на вопросы студентов
-- Использует семантический поиск
+Образовательный бот для мессенджера MAX:
+- Отвечает на вопросы студентов и абитуриентов
+- Использует gRPC для связи с ML сервисом
+- Векторный семантический поиск
 - Команды: `/start`, `/help`, `/info`
 
-Подробнее: [src/infrastructure/max/README.md](src/infrastructure/max/README.md)
+Подробнее: [max-bot/README.md](max-bot/README.md)

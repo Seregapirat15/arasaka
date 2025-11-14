@@ -7,13 +7,13 @@ from maxbot.dispatcher import Dispatcher
 from maxbot.bot import Bot
 from maxbot.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
-from config.config import settings
+from config import settings
 
 logger = logging.getLogger(__name__)
 
 # Опциональный импорт ML сервиса через gRPC
 try:
-    from infrastructure.max.grpc_client import get_ml_client
+    from grpc_client import get_ml_client
     
     # Check ML service availability
     ml_client = get_ml_client()
@@ -155,8 +155,8 @@ def setup_handlers(dp: Dispatcher, bot: Bot):
             # Search for answers via gRPC ML service
             results = ml_client.search_answers(
                 query=text,
-                limit=5,
-                score_threshold=0.3  
+                limit=settings.search_limit,
+                score_threshold=settings.search_threshold
             )
             
             logger.info(f"Search query: '{text}', found {len(results) if results else 0} results")

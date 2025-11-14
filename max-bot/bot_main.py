@@ -1,18 +1,14 @@
 """
 Main entry point for MAX bot using umaxbot
 """
-import sys
-import os
 import logging
 import asyncio
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from maxbot.bot import Bot
 from maxbot.dispatcher import Dispatcher
 
-from config.config import settings
-from infrastructure.max.handlers import setup_handlers
+from config import settings
+from handlers import setup_handlers
 
 logging.basicConfig(
     level=logging.INFO,

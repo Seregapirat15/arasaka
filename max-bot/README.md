@@ -5,7 +5,7 @@
 ## Установка зависимостей
 
 ```bash
-pip install -r src/infrastructure/max/requirements.txt
+pip install -r max-bot/requirements.txt
 ```
 
 ## Настройка
@@ -28,7 +28,7 @@ MAX_POLLING_LIMIT=100
 ## Запуск
 
 ```bash
-python src/infrastructure/max/bot_main.py
+python max-bot/bot_main.py
 ```
 
 **Технология:**
