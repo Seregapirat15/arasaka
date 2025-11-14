@@ -2,7 +2,7 @@
 grpcio>=1.60.0
 grpcio-tools>=1.60.0
 
-# Machine Learning (CPU only) - совместимые версии
+# Machine Learning (CPU only) - совместимые версии для Python 3.13
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch>=2.2.0+cpu
 numpy<2.0.0
@@ -12,11 +12,12 @@ huggingface_hub>=0.20.0
 sentencepiece>=0.1.99
 
 # Vector Database
-qdrant-client>=1.7.0
+qdrant-client>=1.7.1
 
 # Utilities
 python-dotenv>=1.0.0
 pydantic>=2.5.0
+requests>=2.31.0
 
 # Development and Testing
 pytest>=7.4.0
