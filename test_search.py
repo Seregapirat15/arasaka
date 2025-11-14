@@ -3,27 +3,28 @@ import sys
 import os
 import grpc
 
-# Добавляем src в путь
 sys.path.insert(0, 'src')
 
-# Импортируем gRPC модули
 from infrastructure.grpc import arasaka_pb2
 from infrastructure.grpc import arasaka_pb2_grpc
 
 def test_search():
     """Тестируем поиск по вопросам"""
     
-    # Подключаемся к сервису
     channel = grpc.insecure_channel('localhost:8001')
     stub = arasaka_pb2_grpc.ArasakaServiceStub(channel)
     
     try:
-        # Тест поиска на русском
         print("Testing Russian Search...")
         search_request = arasaka_pb2.SearchRequest(
-            query="почему я не могу зарегистрироваться на курс?"
+            query="почему я не могу зарегистрироваться на курс?",
+            limit=10,
+            score_threshold=0.0
         )
-        search_response = stub.SearchAnswers(search_request)
+        search_response = stub.SearchAnswers(
+            search_request,
+            timeout=60.0
+        )
         
         print(f"Found {search_response.total_found} results")
         print(f"Query: {search_response.query}")

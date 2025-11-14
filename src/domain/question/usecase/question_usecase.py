@@ -24,27 +24,34 @@ class QuestionUsecase(IQuestionUsecase):
     @log_method_calls
     async def search_answers(
         self, 
-        query: str
+        query: str,
+        limit: int = None,
+        score_threshold: float = None
     ) -> List[SearchResult]:
         """
         Search for similar answers
         
         Args:
             query: User's question
+            limit: Maximum number of results
+            score_threshold: Minimum similarity score
             
         Returns:
             List of search results as DTOs
         """
         answer_entities = await self.question_service.find_similar_answers(
-            query=query
+            query=query,
+            limit=limit,
+            score_threshold=score_threshold
         )
         
         results = []
         for answer_entity in answer_entities:
             answer_dto = AnswerMapper.entity_to_dto(answer_entity)
+            score = getattr(answer_entity, 'score', 0.0)
             search_result = SearchResult(
                 answer=answer_dto,
-                score=0.0,
+                score=score,
                 query=query
             )
             results.append(search_result)

@@ -25,7 +25,7 @@ async def fill_qdrant_from_csv(csv_file: str, text_col: str = "Text_Cleaned", id
     data = []
     try:
         with open(csv_file, 'r', encoding='utf-8') as file:
-            reader = csv.DictReader(file, delimiter=';')  # Ваши файлы используют ;
+            reader = csv.DictReader(file, delimiter=';')
             for row in reader:
                 if text_col in row and row[text_col].strip():
                     data.append({
@@ -60,7 +60,6 @@ async def fill_qdrant_from_csv(csv_file: str, text_col: str = "Text_Cleaned", id
         }
         points.append(point)
     
-    # Загружаем все точки в Qdrant
     if points:
         print(f"Uploading {len(points)} points to Qdrant...")
         qdrant_repo.client.upsert(
@@ -75,4 +74,6 @@ async def fill_qdrant_from_csv(csv_file: str, text_col: str = "Text_Cleaned", id
 
 
 if __name__ == "__main__":
-    asyncio.run(fill_qdrant_from_csv('src/data/Answers__202507071202.csv', 'Text_Cleaned', 'Id'))
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    csv_path = os.path.join(project_root, 'src', 'data', 'Answers__202507071202.csv')
+    asyncio.run(fill_qdrant_from_csv(csv_path, 'Text_Cleaned', 'Id'))

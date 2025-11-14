@@ -27,13 +27,17 @@ class QuestionServiceImpl(QuestionService):
     
     async def find_similar_answers(
         self, 
-        query: str
+        query: str,
+        limit: int = None,
+        score_threshold: float = None
     ) -> List[Answer]:
         """
         Find similar answers for a given query
         
         Args:
             query: User's question
+            limit: Maximum number of results
+            score_threshold: Minimum similarity score
             
         Returns:
             List of similar answers as domain entities
@@ -45,8 +49,8 @@ class QuestionServiceImpl(QuestionService):
             query_embedding = self.embedding_service.encode_text(query)
             search_results = await self.answer_repository.find_similar_answers(
                 query_embedding=query_embedding,
-                limit=5,
-                score_threshold=0.3
+                limit=limit,
+                score_threshold=score_threshold
             )
             
             logger.info(f"Found {len(search_results)} similar answers for query: {query}")

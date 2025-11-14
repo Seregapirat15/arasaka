@@ -12,7 +12,9 @@ class IQuestionUsecase(ABC):
     @abstractmethod
     async def search_answers(
         self, 
-        query: str
+        query: str,
+        limit: int = None,
+        score_threshold: float = None
     ) -> List[SearchResult]:
         """Search for similar answers"""
         pass

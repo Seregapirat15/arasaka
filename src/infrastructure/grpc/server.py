@@ -31,6 +31,7 @@ class ArasakaServicer(arasaka_pb2_grpc.ArasakaServiceServicer):
     
     def __init__(self):
         self._question_usecase = None
+        self._model_loading = False
         logger.info("Arasaka service initialized")
     
     @property
@@ -58,6 +59,9 @@ class ArasakaServicer(arasaka_pb2_grpc.ArasakaServiceServicer):
             gRPC SearchResponse with search results
         """
         try:
+            limit = request.limit if request.limit > 0 else None
+            score_threshold = request.score_threshold if request.score_threshold >= 0 else None
+            
             try:
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
@@ -66,20 +70,26 @@ class ArasakaServicer(arasaka_pb2_grpc.ArasakaServiceServicer):
                        future = executor.submit(
                            asyncio.run,
                            self.question_usecase.search_answers(
-                               query=request.query
+                               query=request.query,
+                               limit=limit,
+                               score_threshold=score_threshold
                            )
                        )
                        response = future.result()
                 else:
                     response = loop.run_until_complete(
                         self.question_usecase.search_answers(
-                            query=request.query
+                            query=request.query,
+                            limit=limit,
+                            score_threshold=score_threshold
                         )
                     )
             except RuntimeError:
                    response = asyncio.run(
                        self.question_usecase.search_answers(
-                           query=request.query
+                           query=request.query,
+                           limit=limit,
+                           score_threshold=score_threshold
                        )
                    )
             
@@ -166,8 +176,9 @@ def serve():
     try:
         print("Creating gRPC server...")
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        servicer = ArasakaServicer()
         arasaka_pb2_grpc.add_ArasakaServiceServicer_to_server(
-            ArasakaServicer(), server
+            servicer, server
         )
         
         listen_addr = f"{settings.api_host}:{settings.api_port}"
@@ -179,6 +190,19 @@ def serve():
         
         print("Arasaka gRPC Service is running!")
         print("Ready to accept connections")
+        print("Pre-loading model in background...")
+        
+        def preload_model():
+            try:
+                logger.info("Pre-loading embedding model in background...")
+                _ = servicer.question_usecase
+                logger.info("Model pre-loaded successfully")
+            except Exception as e:
+                logger.warning(f"Failed to pre-load model: {e}")
+        
+        import threading
+        threading.Thread(target=preload_model, daemon=True).start()
+        
         print("Press Ctrl+C to stop")
         
         try:
