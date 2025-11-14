@@ -17,7 +17,7 @@ def test_search():
     try:
         print("Testing Russian Search...")
         search_request = arasaka_pb2.SearchRequest(
-            query="почему я не могу зарегистрироваться на курс?",
+            query="что меня зачислили на курс на lms.bmstu.ru?",
             limit=10,
             score_threshold=0.0
         )
