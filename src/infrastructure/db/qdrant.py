@@ -1,6 +1,3 @@
-"""
-Qdrant client for vector storage and search
-"""
 from typing import List, Dict, Any, Optional
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, Filter, FieldCondition, MatchValue
@@ -15,7 +12,6 @@ logger = getLogger(__name__)
 
 
 class QdrantRepository(AnswerRepository):
-    """Service for interacting with Qdrant vector database"""
     
     def __init__(self, host: Optional[str] = None, port: Optional[int] = None):
         self.host = host or settings.qdrant_host
@@ -26,16 +22,6 @@ class QdrantRepository(AnswerRepository):
         logger.info(f"Qdrant client initialized: {self.host}:{self.port}")
     
     def create_collection(self, vector_size: int, distance: Distance = Distance.COSINE) -> bool:
-        """
-        Create a new collection in Qdrant
-        
-        Args:
-            vector_size: Size of the vectors
-            distance: Distance metric for similarity search
-            
-        Returns:
-            True if collection was created successfully
-        """
         try:
             collections = self.client.get_collections()
             collection_names = [col.name for col in collections.collections]
@@ -62,21 +48,10 @@ class QdrantRepository(AnswerRepository):
     async def find_similar_answers(self, query_embedding: List[float], 
                                   limit: int = 5,
                                   score_threshold: float = 0.7) -> List[Answer]:
-        """
-        Search for similar answers based on user question
-        
-        Args:
-            query_embedding: Vector embedding of the user's question
-            limit: Maximum number of results
-            score_threshold: Minimum similarity score
-            
-        Returns:
-            List of similar answers with scores
-        """
         try:
-            limit = limit or settings.search_limit
-            score_threshold = score_threshold or settings.similarity_threshold
-            
+            limit = limit if limit is not None and limit > 0 else settings.search_limit
+            if score_threshold is None:
+                score_threshold = settings.similarity_threshold
             search_results = self.client.search(
                 collection_name=self.collection_name,
                 query_vector=query_embedding,
@@ -91,6 +66,15 @@ class QdrantRepository(AnswerRepository):
                     ]
                 )
             )
+            
+            if len(search_results) == 0:
+                logger.debug("No results with is_visible filter, trying without filter")
+                search_results = self.client.search(
+                    collection_name=self.collection_name,
+                    query_vector=query_embedding,
+                    limit=limit,
+                    score_threshold=score_threshold
+                )
             
             results = []
             for result in search_results:
@@ -113,12 +97,6 @@ class QdrantRepository(AnswerRepository):
     
     
     async def get_collection_info(self) -> dict:
-        """
-        Get information about the collection
-        
-        Returns:
-            Dictionary with collection information
-        """
         try:
             collection_info = self.client.get_collection(self.collection_name)
             return {

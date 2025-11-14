@@ -19,23 +19,8 @@ class EmbeddingServiceImpl(EmbeddingService):
         logger.info(f"Loading model: {self.model_name}")
         logger.info("This may take a few minutes on first run...")
         
-        try:
-            # FRIDA may require special loading parameters
-            if "FRIDA" in self.model_name:
-                self.model = SentenceTransformer(
-                    self.model_name, 
-                    device=self.device,
-                    trust_remote_code=True
-                )
-            else:
-                self.model = SentenceTransformer(self.model_name, device=self.device)
-            logger.info(f"Model loaded successfully: {self.model_name}")
-        except Exception as e:
-            logger.warning(f"Failed to load model {self.model_name}: {e}")
-            logger.info("Trying fallback model...")
-            self.model_name = "intfloat/multilingual-e5-base"
-            self.model = SentenceTransformer(self.model_name, device=self.device)
-            logger.info(f"Fallback model loaded: {self.model_name}")
+        self.model = SentenceTransformer(self.model_name, device=self.device)
+        logger.info(f"Model loaded successfully: {self.model_name}")
     
     def _preprocess_text(self, text: str) -> str:
         """
@@ -52,16 +37,9 @@ class EmbeddingServiceImpl(EmbeddingService):
         
         import re
         
-        # Convert to lowercase
         text = text.lower()
-        
-        # Remove extra whitespace
         text = " ".join(text.split())
-        
-        # Remove special characters but keep basic punctuation
         text = re.sub(r'[^\w\s\.\,\!\?\-]', ' ', text)
-        
-        # Remove multiple spaces
         text = re.sub(r'\s+', ' ', text)
         
         return text.strip()
@@ -84,17 +62,10 @@ class EmbeddingServiceImpl(EmbeddingService):
         
         try:
             processed_text = self._preprocess_text(text)
-            
-            # FRIDA may require special encoding parameters
-            if "FRIDA" in self.model_name:
-                # FRIDA might need specific encode_kwargs
-                embedding = self.model.encode(
-                    processed_text,
-                    normalize_embeddings=True
-                )
-            else:
-                embedding = self.model.encode(processed_text)
-            
+            embedding = self.model.encode(
+                processed_text,
+                normalize_embeddings=True
+            )
             return embedding.tolist()
         except Exception as e:
             logger.error(f"Failed to encode text: {e}")
@@ -102,7 +73,16 @@ class EmbeddingServiceImpl(EmbeddingService):
     
     def get_embedding_dimension(self) -> int:
         """
+        Get the actual embedding dimension from the model
+        
         Returns:
             Dimension of the embedding vectors (1536 for FRIDA)
         """
-        return 1536
+        try:
+            if hasattr(self.model, 'get_sentence_embedding_dimension'):
+                return self.model.get_sentence_embedding_dimension()
+            test_embedding = self.model.encode("test", convert_to_numpy=True)
+            return len(test_embedding)
+        except Exception as e:
+            logger.warning(f"Failed to get embedding dimension, using default: {e}")
+            return 1536

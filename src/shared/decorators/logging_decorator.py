@@ -44,7 +44,7 @@ def log_method_calls(func: Callable) -> Callable:
             logger.error(f"Failed {method_name} after {execution_time:.3f}s: {e}")
             raise
     
-    if hasattr(func, '__code__') and func.__code__.co_flags & 0x80:  # CO_ITERABLE_COROUTINE
+    if hasattr(func, '__code__') and func.__code__.co_flags & 0x80:
         return async_wrapper
     else:
         return sync_wrapper

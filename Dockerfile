@@ -22,8 +22,10 @@ COPY docker-compose.yml .
 
 # Model will be downloaded on first run
 
-# Create non-root user
-RUN useradd --create-home --shell /bin/bash app && chown -R app:app /app
+# Create non-root user and set up cache directories
+RUN useradd --create-home --shell /bin/bash app && \
+    mkdir -p /home/app/.cache/huggingface /home/app/.cache/torch && \
+    chown -R app:app /app /home/app/.cache
 USER app
 
 # Expose port
