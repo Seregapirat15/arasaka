@@ -3,6 +3,12 @@ Configuration settings for the Arasaka Linguistic Service
 """
 import os
 from typing import Optional
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env file from project root
+env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 
 class Settings:
@@ -25,6 +31,12 @@ class Settings:
         self.log_level: str = "INFO"
         
         self.enable_spell_check: bool = True
+        
+        # MAX Bot API settings
+        self.max_api_url: str = os.getenv("MAX_API_URL", "https://platform-api.max.ru")
+        self.max_bot_token: Optional[str] = os.getenv("MAX_BOT_TOKEN", None)
+        self.max_polling_timeout: int = int(os.getenv("MAX_POLLING_TIMEOUT", "30"))
+        self.max_polling_limit: int = int(os.getenv("MAX_POLLING_LIMIT", "100"))
 
 
 settings = Settings()
