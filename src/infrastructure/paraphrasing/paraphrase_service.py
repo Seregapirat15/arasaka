@@ -37,13 +37,68 @@ class ParaphraseService:
         try:
             logger.info(f"Loading paraphrase model: {model_name}")
             self.tokenizer = T5Tokenizer.from_pretrained(model_name)
-            self.model = T5ForConditionalGeneration.from_pretrained(model_name)
-            self.model.to(device)
+            
+            # Загружаем модель с явным указанием устройства, чтобы избежать проблем с meta-тензорами
+            # Отключаем все автоматические оптимизации, которые могут использовать meta-устройство
+            torch_device = torch.device(device)
+            
+            # Загружаем модель с параметрами, которые гарантируют загрузку на CPU без meta-тензоров
+            # Используем device_map=None и low_cpu_mem_usage=False
+            try:
+                self.model = T5ForConditionalGeneration.from_pretrained(
+                    model_name,
+                    torch_dtype=torch.float32,
+                    low_cpu_mem_usage=False,
+                    device_map=None  # Явно отключаем device_map
+                )
+            except TypeError:
+                # Если device_map не поддерживается в старой версии transformers
+                self.model = T5ForConditionalGeneration.from_pretrained(
+                    model_name,
+                    torch_dtype=torch.float32,
+                    low_cpu_mem_usage=False
+                )
+            
+            # Проверяем, что модель не на meta-устройстве
+            try:
+                first_param = next(self.model.parameters())
+                if hasattr(first_param, 'device') and first_param.device.type == 'meta':
+                    raise RuntimeError("Model loaded on meta device")
+            except (StopIteration, AttributeError):
+                pass
+            
+            # Перемещаем модель на нужное устройство
+            self.model = self.model.to(torch_device)
             self.model.eval()
             logger.info(f"Paraphrase model loaded successfully on {device}")
         except Exception as e:
+            error_msg = str(e).lower()
             logger.error(f"Failed to load paraphrase model: {e}")
-            raise
+            
+            # Если ошибка связана с meta-тензорами, пробуем альтернативный способ
+            if "meta tensor" in error_msg or "to_empty" in error_msg or "meta device" in error_msg:
+                logger.warning("Meta tensor error detected, trying alternative load method")
+                try:
+                    # Пробуем загрузить модель без всех оптимизаций
+                    import os
+                    # Временно отключаем accelerate, если он используется
+                    os.environ['ACCELERATE_DISABLE_RICH'] = '1'
+                    
+                    self.model = T5ForConditionalGeneration.from_pretrained(
+                        model_name,
+                        torch_dtype=torch.float32
+                    )
+                    # Явно перемещаем на CPU сначала, затем на нужное устройство
+                    self.model = self.model.cpu()
+                    if device != 'cpu':
+                        self.model = self.model.to(torch.device(device))
+                    self.model.eval()
+                    logger.info(f"Paraphrase model loaded successfully on {device} (alternative method)")
+                except Exception as e2:
+                    logger.error(f"Alternative load method also failed: {e2}")
+                    raise
+            else:
+                raise
         
         try:
             # Try to use the same embedding model as the main service
@@ -85,13 +140,21 @@ class ParaphraseService:
         text = prefix + query
         
         try:
-            inputs = self.tokenizer(
+            # Токенизируем текст
+            tokenized = self.tokenizer(
                 text,
                 max_length=max_length,
                 padding=True,
                 truncation=True,
                 return_tensors="pt"
-            ).to(self.device)
+            )
+            
+            # Перемещаем на нужное устройство, используя torch.device
+            torch_device = torch.device(self.device)
+            inputs = {
+                "input_ids": tokenized["input_ids"].to(torch_device),
+                "attention_mask": tokenized["attention_mask"].to(torch_device)
+            }
             
             with torch.no_grad():
                 outputs = self.model.generate(
@@ -102,7 +165,8 @@ class ParaphraseService:
                     temperature=temperature,
                     top_p=top_p,
                     do_sample=True,
-                    repetition_penalty=1.2
+                    repetition_penalty=1.2,
+                    pad_token_id=self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
                 )
             
             paraphrases = []
