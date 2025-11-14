@@ -85,4 +85,4 @@ class EmbeddingServiceImpl(EmbeddingService):
             return len(test_embedding)
         except Exception as e:
             logger.warning(f"Failed to get embedding dimension, using default: {e}")
-            return 1536
+        return 1536
