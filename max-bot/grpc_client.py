@@ -7,10 +7,11 @@ from typing import List, Optional
 import sys
 import os
 
-# Add src directory to path for gRPC proto imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Add shared/proto directory to path for gRPC proto imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'shared', 'proto'))
 
-from infrastructure.grpc import arasaka_pb2, arasaka_pb2_grpc
+import arasaka_pb2
+import arasaka_pb2_grpc
 from config import settings
 
 logger = logging.getLogger(__name__)

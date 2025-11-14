@@ -47,3 +47,4 @@ message HealthResponse {
     string qdrant_status = 4;
     map<string, string> collection_info = 5;
 }
+

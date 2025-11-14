@@ -11,13 +11,14 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
-COPY src/requirements.txt .
+COPY ml-service/requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY src/ ./src/
+COPY ml-service/ ./ml-service/
+COPY shared/ ./shared/
 COPY docker-compose.yml .
 
 # Model will be downloaded on first run
@@ -36,4 +37,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import socket; socket.create_connection(('localhost', 8001), timeout=5)"
 
 # Run the application
-CMD ["python", "src/main.py"]
+CMD ["python", "ml-service/main.py"]

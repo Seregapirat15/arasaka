@@ -1,0 +1,57 @@
+# Arasaka Project - Unified Requirements
+# Установка всех зависимостей для MAX Bot и ML Service
+#
+# Для установки:
+#   pip install -r requirements.txt
+#
+# Для установки только бота:
+#   pip install -r max-bot/requirements.txt
+#
+# Для установки только ML Service:
+#   pip install -r ml-service/requirements.txt
+
+# ============================================================================
+# MAX Bot Dependencies
+# ============================================================================
+
+# MAX Bot Library
+umaxbot>=0.1.0
+
+# ============================================================================
+# ML Service Dependencies
+# ============================================================================
+
+# gRPC
+grpcio>=1.60.0
+grpcio-tools>=1.60.0
+
+# Machine Learning (CPU only) - совместимые версии для Python 3.13
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.6.0+cpu
+numpy<2.0.0
+sentence-transformers>=2.7.0
+transformers>=4.40.0
+huggingface_hub>=0.20.0
+sentencepiece>=0.1.99
+
+# Vector Database
+qdrant-client>=1.7.1
+
+# ============================================================================
+# Common Dependencies (используются обоими сервисами)
+# ============================================================================
+
+# Configuration
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+
+# Utilities
+requests>=2.31.0
+
+# ============================================================================
+# Development and Testing (опционально)
+# ============================================================================
+
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+

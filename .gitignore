@@ -42,10 +42,24 @@ env/
 *.onnx
 models/
 
-# Data
-*.csv
+# Data (но не данные для обучения)
+# *.csv  # Закомментировано, так как нужны данные в ml-service/data/
 *.json
-data/
+!ml-service/data/*.csv  # Исключение для данных
+!experiments/**/results/*.json  # Исключение для результатов экспериментов
 
 # Qdrant
 qdrant_data/
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+.DS_Store
+Thumbs.db

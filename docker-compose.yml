@@ -8,7 +8,7 @@ services:
     environment:
       - QDRANT__SERVICE__HTTP_PORT=6333
 
-  arasaka:
+  ml-service:
     build: .
     ports:
       - "8001:8001"
@@ -20,7 +20,8 @@ services:
       - TRANSFORMERS_CACHE=/home/app/.cache/huggingface
       - TORCH_HOME=/home/app/.cache/torch
     volumes:
-      - ./src:/app/src
+      - ./ml-service:/app/ml-service
+      - ./shared:/app/shared
       - model_cache:/home/app/.cache/huggingface
     restart: unless-stopped
 

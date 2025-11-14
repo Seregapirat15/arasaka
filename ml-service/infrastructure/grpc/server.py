@@ -3,6 +3,7 @@ from concurrent import futures
 import logging
 import asyncio
 import sys
+import os
 from typing import Dict, Any
 
 if sys.platform == "win32":
@@ -10,8 +11,11 @@ if sys.platform == "win32":
     sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
     sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
 
-from . import arasaka_pb2
-from . import arasaka_pb2_grpc
+# Add shared directory to path for proto imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'shared', 'proto'))
+
+import arasaka_pb2
+import arasaka_pb2_grpc
 
 from config.config import settings
 from infrastructure.di.dependencies import get_search_usecase, get_qdrant_repository
