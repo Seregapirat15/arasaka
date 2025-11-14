@@ -75,5 +75,5 @@ async def fill_qdrant_from_csv(csv_file: str, text_col: str = "Text_Cleaned", id
 
 if __name__ == "__main__":
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    csv_path = os.path.join(project_root, 'src', 'data', 'Answers__202507071202.csv')
+    csv_path = os.path.join(project_root, 'ml-service', 'data', 'Answers__202507071202.csv')
     asyncio.run(fill_qdrant_from_csv(csv_path, 'Text_Cleaned', 'Id'))
