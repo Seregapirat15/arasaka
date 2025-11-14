@@ -62,10 +62,10 @@ class EmbeddingServiceImpl(EmbeddingService):
         
         try:
             processed_text = self._preprocess_text(text)
-                embedding = self.model.encode(
-                    processed_text,
-                    normalize_embeddings=True
-                )
+            embedding = self.model.encode(
+                processed_text,
+                normalize_embeddings=True
+            )
             return embedding.tolist()
         except Exception as e:
             logger.error(f"Failed to encode text: {e}")
