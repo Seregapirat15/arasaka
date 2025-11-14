@@ -11,14 +11,22 @@ from config.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Опциональный импорт QA сервиса (может быть недоступен)
+# Опциональный импорт ML сервиса через gRPC
 try:
-    from infrastructure.di.dependencies import get_search_usecase
-    QA_SERVICE_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"QA service not available: {e}. Bot will work but won't answer questions.")
-    QA_SERVICE_AVAILABLE = False
-    get_search_usecase = None
+    from infrastructure.max.grpc_client import get_ml_client
+    
+    # Check ML service availability
+    ml_client = get_ml_client()
+    ML_SERVICE_AVAILABLE = ml_client.health_check()
+    
+    if ML_SERVICE_AVAILABLE:
+        logger.info("ML service is available via gRPC")
+    else:
+        logger.warning("ML service health check failed")
+except Exception as e:
+    logger.warning(f"ML service not available: {e}. Bot will work but won't answer questions.")
+    ML_SERVICE_AVAILABLE = False
+    ml_client = None
 
 
 def setup_handlers(dp: Dispatcher, bot: Bot):
@@ -115,8 +123,8 @@ def setup_handlers(dp: Dispatcher, bot: Bot):
         
         thinking_msg_id = thinking_msg.get("message_id") if isinstance(thinking_msg, dict) else None
         
-        # Check if QA service is available
-        if not QA_SERVICE_AVAILABLE:
+        # Check if ML service is available
+        if not ML_SERVICE_AVAILABLE:
             error_text = (
                 "⚠️ Сервис поиска ответов временно недоступен.\n\n"
                 "Пожалуйста, попробуйте позже или используйте команды /start, /help, /info"
@@ -144,11 +152,8 @@ def setup_handlers(dp: Dispatcher, bot: Bot):
             return
         
         try:
-            # Get QA usecase
-            search_usecase = get_search_usecase()
-            
-            # Search for answers with limit and score threshold
-            results = await search_usecase.search_answers(
+            # Search for answers via gRPC ML service
+            results = ml_client.search_answers(
                 query=text,
                 limit=5,
                 score_threshold=0.5
@@ -157,8 +162,8 @@ def setup_handlers(dp: Dispatcher, bot: Bot):
             if results and len(results) > 0:
                 # Get the best answer
                 best_result = results[0]
-                answer_text = best_result.answer.text
-                score = getattr(best_result, 'score', 0.0)
+                answer_text = best_result['answer']['text']
+                score = best_result.get('score', 0.0)
                 
                 # Format response
                 response = f"💡 Ответ:\n\n{answer_text}"
