@@ -165,18 +165,9 @@ def setup_handlers(dp: Dispatcher, bot: Bot):
                 # Get the best answer
                 best_result = results[0]
                 answer_text = best_result['answer']['text']
-                score = best_result.get('score', 0.0)
                 
                 # Format response
                 response = f"💡 Ответ:\n\n{answer_text}"
-                
-                # Add score info if available
-                if score > 0:
-                    response += f"\n\n📊 Релевантность: {score:.2%}"
-                
-                # If there are more results, mention it
-                if len(results) > 1:
-                    response += f"\n\n(Найдено {len(results)} похожих ответов)"
                 
                 # Update or send message with answer
                 if thinking_msg_id:
@@ -203,7 +194,7 @@ def setup_handlers(dp: Dispatcher, bot: Bot):
                         format="markdown"
                     )
                 
-                logger.info(f"Sent answer to chat {chat_id}, score: {score:.2f}")
+                logger.info(f"Sent answer to chat {chat_id}")
             else:
                 # No results found
                 error_text = (

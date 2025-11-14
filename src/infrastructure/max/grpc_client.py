@@ -117,9 +117,9 @@ class MLServiceClient:
             for result in response.results:
                 results.append({
                     'answer': {
-                        'question_id': result.question_id,
-                        'text': result.answer_text,
-                        'question': result.question_text
+                        'id': result.id,
+                        'text': result.answer,
+                        'answer_id': result.answer_id
                     },
                     'score': result.score
                 })
