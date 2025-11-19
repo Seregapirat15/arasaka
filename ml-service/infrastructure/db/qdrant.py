@@ -74,7 +74,7 @@ class QdrantRepository(AnswerRepository):
                     query_vector=query_embedding,
                     limit=limit,
                     score_threshold=score_threshold
-            )
+                )
             
             results = []
             for result in search_results:
