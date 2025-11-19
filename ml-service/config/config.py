@@ -31,6 +31,7 @@ class Settings:
         self.log_level: str = "INFO"
         
         self.enable_spell_check: bool = True
+        self.use_paraphrasing: bool = os.getenv("USE_PARAPHRASING", "true").lower() == "true"
         
         # MAX Bot API settings
         self.max_api_url: str = os.getenv("MAX_API_URL", "https://platform-api.max.ru")

@@ -57,8 +57,14 @@ class DIContainer:
     
     def get_question_service(self) -> QuestionServiceImpl:
         if self._question_service is None:
-            paraphrase_service = self.get_paraphrase_service()
-            use_paraphrasing = paraphrase_service is not None
+            from config.config import settings
+            paraphrase_service = None
+            use_paraphrasing = False
+            
+            # Only enable paraphrasing if explicitly enabled in config
+            if settings.use_paraphrasing:
+                paraphrase_service = self.get_paraphrase_service()
+                use_paraphrasing = paraphrase_service is not None
             
             self._question_service = QuestionServiceImpl(
                 self.get_embedding_service(),

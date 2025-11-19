@@ -57,25 +57,33 @@ class QdrantRepository(AnswerRepository):
             # Run synchronous search in executor to avoid blocking event loop
             loop = asyncio.get_event_loop()
             
-            # Try with filter first
-            try:
-                search_results = await loop.run_in_executor(
-                    None,
-                    lambda: self.client.search(
-                        collection_name=self.collection_name,
-                        query_vector=query_embedding,
-                        limit=limit,
-                        score_threshold=score_threshold,
-                        query_filter=Filter(
-                            must=[
-                                FieldCondition(
-                                    key="is_visible",
-                                    match=MatchValue(value=True)
-                                )
-                            ]
-                        )
+            def search_with_filter():
+                return self.client.search(
+                    collection_name=self.collection_name,
+                    query_vector=query_embedding,
+                    limit=limit,
+                    score_threshold=score_threshold,
+                    query_filter=Filter(
+                        must=[
+                            FieldCondition(
+                                key="is_visible",
+                                match=MatchValue(value=True)
+                            )
+                        ]
                     )
                 )
+            
+            def search_without_filter():
+                return self.client.search(
+                    collection_name=self.collection_name,
+                    query_vector=query_embedding,
+                    limit=limit,
+                    score_threshold=score_threshold
+                )
+            
+            # Try with filter first
+            try:
+                search_results = await loop.run_in_executor(None, search_with_filter)
             except Exception as filter_error:
                 logger.debug(f"Search with filter failed: {filter_error}, trying without filter")
                 search_results = []
@@ -83,15 +91,7 @@ class QdrantRepository(AnswerRepository):
             # If no results with filter, try without filter
             if len(search_results) == 0:
                 logger.debug("No results with is_visible filter, trying without filter")
-                search_results = await loop.run_in_executor(
-                    None,
-                    lambda: self.client.search(
-                        collection_name=self.collection_name,
-                        query_vector=query_embedding,
-                        limit=limit,
-                        score_threshold=score_threshold
-                    )
-                )
+                search_results = await loop.run_in_executor(None, search_without_filter)
             
             results = []
             for result in search_results:
