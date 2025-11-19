@@ -85,22 +85,29 @@ class QdrantRepository(AnswerRepository):
             
             # Try with filter first
             try:
-                search_results = await loop.run_in_executor(None, search_with_filter)
+                response = await loop.run_in_executor(None, search_with_filter)
+                # query_points returns QueryResponse, extract points
+                if hasattr(response, 'points'):
+                    search_results = response.points
+                elif hasattr(response, 'result'):
+                    search_results = response.result
+                else:
+                    search_results = response
             except Exception as filter_error:
                 logger.debug(f"Search with filter failed: {filter_error}, trying without filter")
                 search_results = []
             
             # If no results with filter, try without filter
-            if len(search_results) == 0:
+            if not search_results or len(search_results) == 0:
                 logger.debug("No results with is_visible filter, trying without filter")
-                search_results = await loop.run_in_executor(None, search_without_filter)
-            
-            # query_points returns QueryResponse with points attribute
-            # Extract points from response if needed
-            if hasattr(search_results, 'points'):
-                search_results = search_results.points
-            elif hasattr(search_results, 'result'):
-                search_results = search_results.result
+                response = await loop.run_in_executor(None, search_without_filter)
+                # Extract points from response
+                if hasattr(response, 'points'):
+                    search_results = response.points
+                elif hasattr(response, 'result'):
+                    search_results = response.result
+                else:
+                    search_results = response
             
             results = []
             for result in search_results:
