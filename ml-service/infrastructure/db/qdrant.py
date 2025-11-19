@@ -52,47 +52,53 @@ class QdrantRepository(AnswerRepository):
             limit = limit if limit is not None and limit > 0 else settings.search_limit
             if score_threshold is None:
                 score_threshold = settings.similarity_threshold
-            search_results = self.client.search(
-                collection_name=self.collection_name,
-                query_vector=query_embedding,
-                limit=limit,
-                score_threshold=score_threshold,
-                query_filter=Filter(
-                    must=[
-                        FieldCondition(
-                            key="is_visible",
-                            match=MatchValue(value=True)
-                        )
-                    ]
-                )
+            
+            # Use query_points instead of search (new API)
+            # query can be a vector directly, filter goes in query_filter parameter
+            query_filter = Filter(
+                must=[
+                    FieldCondition(
+                        key="is_visible",
+                        match=MatchValue(value=True)
+                    )
+                ]
             )
             
-            if len(search_results) == 0:
+            search_results = self.client.query_points(
+                collection_name=self.collection_name,
+                query=query_embedding,
+                query_filter=query_filter,
+                limit=limit,
+                score_threshold=score_threshold
+            )
+            
+            # If no results with filter, try without filter
+            if len(search_results.points) == 0:
                 logger.debug("No results with is_visible filter, trying without filter")
-                search_results = self.client.search(
+                search_results = self.client.query_points(
                     collection_name=self.collection_name,
-                    query_vector=query_embedding,
+                    query=query_embedding,
                     limit=limit,
                     score_threshold=score_threshold
-            )
+                )
             
             results = []
-            for result in search_results:
+            for point in search_results.points:
                 answer = Answer(
-                    id=str(result.id),
-                    text=result.payload.get("answer", ""),
-                    answer_id=result.payload.get("answer_id", ""),
-                    metadata={k: v for k, v in result.payload.items() 
+                    id=str(point.id),
+                    text=point.payload.get("answer", ""),
+                    answer_id=point.payload.get("answer_id", ""),
+                    metadata={k: v for k, v in point.payload.items() 
                              if k not in ["question", "answer", "question_id", "is_visible"]}
                 )
-                answer.score = result.score
+                answer.score = point.score
                 results.append(answer)
             
             logger.debug(f"Found {len(results)} similar answers")
             return results
             
         except Exception as e:
-            logger.error(f"Failed to search similar answers: {e}")
+            logger.error(f"Failed to search similar answers: {e}", exc_info=True)
             return []
     
     

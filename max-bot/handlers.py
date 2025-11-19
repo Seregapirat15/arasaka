@@ -223,20 +223,6 @@ def setup_handlers(dp: Dispatcher, bot: Bot):
                     )
                 
                 logger.warning(f"No results found for query '{text}' from chat {chat_id}")
-                # Попробуем поиск без порога для отладки
-                try:
-                    results_no_threshold = await search_usecase.search_answers(
-                        query=text,
-                        limit=5,
-                        score_threshold=0.0  # Без порога
-                    )
-                    if results_no_threshold:
-                        logger.info(f"Found {len(results_no_threshold)} results without threshold")
-                        for i, r in enumerate(results_no_threshold[:3]):
-                            score = getattr(r, 'score', 0.0)
-                            logger.info(f"  Result {i+1}: score={score:.3f}")
-                except Exception as debug_e:
-                    logger.error(f"Debug search failed: {debug_e}")
         
         except Exception as e:
             logger.error(f"Error processing question: {e}", exc_info=True)
