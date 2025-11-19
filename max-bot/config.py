@@ -23,7 +23,7 @@ class BotConfig:
         # ML Service (gRPC)
         self.ml_service_host: str = os.getenv("ML_SERVICE_HOST", "localhost")
         self.ml_service_port: int = int(os.getenv("ML_SERVICE_PORT", "8001"))
-        self.ml_service_timeout: int = int(os.getenv("ML_SERVICE_TIMEOUT", "30"))
+        self.ml_service_timeout: int = int(os.getenv("ML_SERVICE_TIMEOUT", "90"))  # Increased for model loading
         
         # Search settings
         self.search_limit: int = 5
