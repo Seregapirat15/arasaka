@@ -1,4 +1,4 @@
-# 🚀 Quick Start Guide
+#  Quick Start Guide
 
 Быстрая инструкция для запуска проекта Arasaka.
 
@@ -15,7 +15,7 @@ cd arasaka
 cp env.example .env
 ```
 
-Отредактируйте `.env` и добавьте `MAX_BOT_TOKEN`.
+Создайте `.env` и добавьте `MAX_BOT_TOKEN`.
 
 ## 3. Запуск ML Service и Qdrant
 
@@ -34,7 +34,7 @@ docker-compose logs -f ml-service
 ## 5. Загрузка данных
 
 ```bash
-docker-compose exec ml-service python ml-service/tools/fill_qdrant.py
+python ml-service/tools/fill_qdrant.py
 ```
 
 ## 6. Установка зависимостей
