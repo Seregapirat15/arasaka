@@ -34,7 +34,7 @@ docker-compose logs -f ml-service
 ## 5. Загрузка данных
 
 ```bash
-python ml-service/tools/fill_qdrant.py
+docker-compose exec ml-service python ml-service/tools/fill_qdrant.py
 ```
 
 ## 6. Установка зависимостей
