@@ -3,6 +3,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, Filter, FieldCondition, MatchValue
 import numpy as np
 from logging import getLogger
+import asyncio
 
 from config.config import settings
 from domain.question.entities.answer import Answer
@@ -52,28 +53,44 @@ class QdrantRepository(AnswerRepository):
             limit = limit if limit is not None and limit > 0 else settings.search_limit
             if score_threshold is None:
                 score_threshold = settings.similarity_threshold
-            search_results = self.client.search(
-                collection_name=self.collection_name,
-                query_vector=query_embedding,
-                limit=limit,
-                score_threshold=score_threshold,
-                query_filter=Filter(
-                    must=[
-                        FieldCondition(
-                            key="is_visible",
-                            match=MatchValue(value=True)
-                        )
-                    ]
-                )
-            )
             
+            # Run synchronous search in executor to avoid blocking event loop
+            loop = asyncio.get_event_loop()
+            
+            # Try with filter first
+            try:
+                search_results = await loop.run_in_executor(
+                    None,
+                    lambda: self.client.search(
+                        collection_name=self.collection_name,
+                        query_vector=query_embedding,
+                        limit=limit,
+                        score_threshold=score_threshold,
+                        query_filter=Filter(
+                            must=[
+                                FieldCondition(
+                                    key="is_visible",
+                                    match=MatchValue(value=True)
+                                )
+                            ]
+                        )
+                    )
+                )
+            except Exception as filter_error:
+                logger.debug(f"Search with filter failed: {filter_error}, trying without filter")
+                search_results = []
+            
+            # If no results with filter, try without filter
             if len(search_results) == 0:
                 logger.debug("No results with is_visible filter, trying without filter")
-                search_results = self.client.search(
-                    collection_name=self.collection_name,
-                    query_vector=query_embedding,
-                    limit=limit,
-                    score_threshold=score_threshold
+                search_results = await loop.run_in_executor(
+                    None,
+                    lambda: self.client.search(
+                        collection_name=self.collection_name,
+                        query_vector=query_embedding,
+                        limit=limit,
+                        score_threshold=score_threshold
+                    )
                 )
             
             results = []
@@ -92,21 +109,25 @@ class QdrantRepository(AnswerRepository):
             return results
             
         except Exception as e:
-            logger.error(f"Failed to search similar answers: {e}")
+            logger.error(f"Failed to search similar answers: {e}", exc_info=True)
             return []
     
     
     async def get_collection_info(self) -> dict:
         try:
-            collection_info = self.client.get_collection(self.collection_name)
+            loop = asyncio.get_event_loop()
+            collection_info = await loop.run_in_executor(
+                None,
+                lambda: self.client.get_collection(self.collection_name)
+            )
             return {
-                "name": collection_info.config.params.vectors.size,
+                "name": self.collection_name,
                 "vector_size": collection_info.config.params.vectors.size,
                 "distance": collection_info.config.params.vectors.distance,
                 "points_count": collection_info.points_count,
                 "status": collection_info.status
             }
         except Exception as e:
-            logger.error(f"Failed to get collection info: {e}")
+            logger.error(f"Failed to get collection info: {e}", exc_info=True)
             return {}
     

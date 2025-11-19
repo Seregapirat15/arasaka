@@ -191,8 +191,10 @@ def check_and_load_data():
         try:
             from tools.fill_qdrant import fill_qdrant_from_csv
             
+            # __file__ is /app/ml-service/infrastructure/grpc/server.py
+            # project_root should be /app/ml-service
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            csv_path = os.path.join(project_root, 'ml-service', 'data', 'Answers__202507071202.csv')
+            csv_path = os.path.join(project_root, 'data', 'Answers__202507071202.csv')
             
             if os.path.exists(csv_path):
                 logger.info(f"Loading data from {csv_path}")
