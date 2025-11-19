@@ -169,6 +169,46 @@ class ArasakaServicer(arasaka_pb2_grpc.ArasakaServiceServicer):
             )
 
 
+def check_and_load_data():
+    """Check if Qdrant collection is empty and load data if needed"""
+    try:
+        qdrant_repo = get_qdrant_repository()
+        
+        # Check collection
+        try:
+            collection_info = qdrant_repo.client.get_collection(qdrant_repo.collection_name)
+            points_count = collection_info.points_count
+            
+            if points_count > 0:
+                logger.info(f"Collection already has {points_count} points, skipping data load")
+                return
+        except Exception as e:
+            logger.warning(f"Could not check collection: {e}, will try to load data anyway")
+        
+        logger.info("Collection is empty or doesn't exist, loading data...")
+        
+        # Import and run fill script
+        try:
+            from tools.fill_qdrant import fill_qdrant_from_csv
+            
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            csv_path = os.path.join(project_root, 'ml-service', 'data', 'Answers__202507071202.csv')
+            
+            if os.path.exists(csv_path):
+                logger.info(f"Loading data from {csv_path}")
+                asyncio.run(fill_qdrant_from_csv(csv_path, 'Text_Cleaned', 'Id'))
+                logger.info("Data loaded successfully")
+            else:
+                logger.warning(f"CSV file not found: {csv_path}, skipping data load")
+        except Exception as e:
+            logger.error(f"Failed to load data: {e}", exc_info=True)
+            # Don't fail startup if data loading fails
+            
+    except Exception as e:
+        logger.error(f"Failed to check/load data: {e}", exc_info=True)
+        # Don't fail startup if data loading fails
+
+
 def serve():
     print("Starting Arasaka gRPC Service...")
     print(f"System resources check:")
@@ -176,6 +216,17 @@ def serve():
     print(f"   - Device: {settings.model_device}")
     print(f"   - Qdrant: {settings.qdrant_host}:{settings.qdrant_port}")
     print(f"   - Collection: {settings.qdrant_collection_name}")
+    
+    # Check and load data if needed (in background)
+    def load_data_background():
+        try:
+            check_and_load_data()
+        except Exception as e:
+            logger.error(f"Background data load failed: {e}")
+    
+    import threading
+    data_loader_thread = threading.Thread(target=load_data_background, daemon=True)
+    data_loader_thread.start()
     
     try:
         print("Creating gRPC server...")
@@ -204,8 +255,8 @@ def serve():
             except Exception as e:
                 logger.warning(f"Failed to pre-load model: {e}")
         
-        import threading
-        threading.Thread(target=preload_model, daemon=True).start()
+        model_loader_thread = threading.Thread(target=preload_model, daemon=True)
+        model_loader_thread.start()
         
         print("Press Ctrl+C to stop")
         
