@@ -58,9 +58,10 @@ class QdrantRepository(AnswerRepository):
             loop = asyncio.get_event_loop()
             
             def search_with_filter():
-                return self.client.search(
+                # Use query_points for vector search
+                return self.client.query_points(
                     collection_name=self.collection_name,
-                    query_vector=query_embedding,
+                    query=query_embedding,
                     limit=limit,
                     score_threshold=score_threshold,
                     query_filter=Filter(
@@ -74,9 +75,10 @@ class QdrantRepository(AnswerRepository):
                 )
             
             def search_without_filter():
-                return self.client.search(
+                # Use query_points for vector search
+                return self.client.query_points(
                     collection_name=self.collection_name,
-                    query_vector=query_embedding,
+                    query=query_embedding,
                     limit=limit,
                     score_threshold=score_threshold
                 )
@@ -92,6 +94,13 @@ class QdrantRepository(AnswerRepository):
             if len(search_results) == 0:
                 logger.debug("No results with is_visible filter, trying without filter")
                 search_results = await loop.run_in_executor(None, search_without_filter)
+            
+            # query_points returns QueryResponse with points attribute
+            # Extract points from response if needed
+            if hasattr(search_results, 'points'):
+                search_results = search_results.points
+            elif hasattr(search_results, 'result'):
+                search_results = search_results.result
             
             results = []
             for result in search_results:
