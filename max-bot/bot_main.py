@@ -3,6 +3,7 @@ Main entry point for MAX bot using umaxbot
 """
 import logging
 import asyncio
+import sys
 
 from maxbot.bot import Bot
 from maxbot.dispatcher import Dispatcher
